@@ -12,16 +12,12 @@ export default defineConfig({
 			tableOfContents: true,
 			sidebar: [
 				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
-				},
-				{
-					label: 'Guides',
-					autogenerate: { directory: 'guides' },
+					label: 'Tutorials',
+					autogenerate: { directory: '01-tutorials' },
 				},
 				{
 					label: 'Other',
-					autogenerate: { directory: 'other' },
+					autogenerate: { directory: '02-other' },
 				},
 				
 			],
