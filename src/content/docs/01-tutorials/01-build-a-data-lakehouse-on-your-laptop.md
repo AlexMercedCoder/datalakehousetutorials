@@ -7,7 +7,7 @@ These Directions will show you how to setup a data lakehouse on your laptop for 
 
 **Pre-Reqs:** Docker & Docker-Compose installed
 
-### Step 1 - The docker-compose.yml
+## Step 1 - The docker-compose.yml
 
 The docker-compose.yml will define all the pieces you need in your lakehouse which will include:
 
@@ -17,6 +17,8 @@ The docker-compose.yml will define all the pieces you need in your lakehouse whi
 
 - Dremio: Data Lakehouse platform to provide an easy to use and fast point of access for the Apache Iceberg tables stored on Nessie/Minio and other sources we connect.
 
+- Superset: Open source BI Dashboard tool
+
 `docker-compose.yml`
 
 ```yaml
@@ -24,17 +26,17 @@ version: "3"
 
 services:
   # Nessie Catalog Server Using In-Memory Store
-  catalog:
+  nessie:
     image: projectnessie/nessie:latest
-    container_name: catalog
+    container_name: nessie
     networks:
-      dremio-laptop-lakehouse:
+      laptop-lakehouse:
     ports:
       - 19120:19120
   # Minio Storage Server
-  storage:
+  minio:
     image: minio/minio:latest
-    container_name: storage
+    container_name: minio
     environment:
       - MINIO_ROOT_USER=admin
       - MINIO_ROOT_PASSWORD=password
@@ -42,7 +44,7 @@ services:
       - MINIO_REGION_NAME=us-east-1
       - MINIO_REGION=us-east-1
     networks:
-      dremio-laptop-lakehouse:
+      laptop-lakehouse:
     ports:
       - 9001:9001
       - 9000:9000
@@ -57,11 +59,18 @@ services:
       - 32010:32010
     container_name: dremio
     networks:
-      dremio-laptop-lakehouse:
+      laptop-lakehouse:
+  # Superset
+  superset:
+    platform: linux/x86_64
+    image: alexmerced/dremio-superset
+    ports:
+      - 8080:8088
+    container_name: dremio
+    networks:
+      laptop-lakehouse:
 networks:
-  dremio-laptop-lakehouse:
-```
-
+  
 * If you want the files minio writes to be in your host file system add a volume entry
 
 ```yaml
@@ -88,7 +97,7 @@ docker compose down
 docker-compose down
 ```
 
-### Step 2 - Setting up our storage bucket
+## Step 2 - Setting up our storage bucket
 
 - Open up an internet browser
 
@@ -98,7 +107,7 @@ docker-compose down
 
 - Create a bucket, let's call it `warehouse`
 
-### Step 3 - Connect Dremio to Data Lake
+## Step 3 - Connect Dremio to Data Lake
 
 - Open up a new internet browser tab
 
@@ -112,12 +121,12 @@ docker-compose down
 
 There are two sections we need to fill out, the **general** and **storage** sections:
 
-##### General (Connecting to Nessie Server)
+### General (Connecting to Nessie Server)
 - Set the name of the source to “nessie”
-- Set the endpoint URL to “http://catalog:19120/api/v2”
+- Set the endpoint URL to “http://nessie:19120/api/v2”
 Set the authentication to “none”
 
-##### Storage Settings 
+### Storage Settings 
 ##### (So Dremio can read and write data files for Iceberg tables)
 
 - For your access key, set “admin”
@@ -129,7 +138,20 @@ Set the authentication to “none”
     - `dremio.s3.compat` to `true`
 - Uncheck “encrypt connection” (since our local Nessie instance is running on http)
 
-### Testing it Out
+### Step 4 - Connecting Dremio to Superset
+
+- Turn on Superset with the command:
+
+```bash
+docker-compose exec superset superset init
+```
+
+- login at `localhost:8080/login` with username `admin` and password `admin`
+- use the url to esablish connection `dremio+flight://<dremio-username>:<dremio-password>@dremio:32010/?UseEncryption=false` (if not using the docker-compose file above change `dremio` to the ip address to machine with Dremio running)
+- If you need to look up the ip address of a docker container use `docker network ls` to see your docker networks then `docker network <name_or_id>` to see the details of the containers on that network
+- click test connection
+
+## Testing it Out
 
 - Head to the SQL Runner on Dremio
 
@@ -143,5 +165,7 @@ SELECT * FROM nessie.names;
 
 - Go explore you storage on minio, you should see all the Apache Iceberg data & metadata stored in your warehouse bucket.
 
-### Things to Be Aware Of
+
+
+## Things to Be Aware Of
 - By default the Nessie images uses memory to store references, so if you shut down and restart the cluster Nessie will forget your tables. [Configure Nessie with a Data Store to Persist Nessie Metadata](https://projectnessie.org/try/configuration/#support-for-the-database-specific-implementations)
