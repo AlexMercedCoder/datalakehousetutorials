@@ -21,6 +21,24 @@ export default defineConfig({
 				},
 				
 			],
+			head: [
+				{
+				  tag: 'script',
+				  attrs: {
+					async: true,
+					src: 'https://www.googletagmanager.com/gtag/js?id=G-6Q4FD7L0ZK', // Replace with your Google Analytics ID
+				  },
+				},
+				{
+				  tag: 'script',
+				  content: `
+					window.dataLayer = window.dataLayer || [];
+					function gtag(){dataLayer.push(arguments);}
+					gtag('js', new Date());
+					gtag('config', 'G-6Q4FD7L0ZK'); // Replace with your Google Analytics ID
+				  `,
+				},
+			  ],
 		}),
 	],
 
